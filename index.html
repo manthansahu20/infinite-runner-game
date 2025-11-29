@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Infinite Runner (Speed Increase)</title>
+
+<style>
+    body {
+        margin: 0;
+        background: #222;
+        overflow: hidden;
+        font-family: Arial;
+    }
+
+    .game {
+        width: 100%;
+        height: 350px;
+        background: linear-gradient(#87CEEB, #4CAF50);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ground {
+        position: absolute;
+        bottom: 0;
+        width: 200%;
+        height: 45px;
+        background: #3f8f41;
+        animation: groundMove 1.5s linear infinite;
+    }
+
+    @keyframes groundMove {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(50%); }
+    }
+
+    /* Player (Right Side Fixed) */
+    #player {
+        width: 55px;
+        height: 60px;
+        background: yellow;
+        position: absolute;
+        bottom: 45px;
+        right: 70px;
+        border-radius: 12px;
+        box-shadow: 0px 8px 15px rgba(0,0,0,0.3);
+    }
+
+    /* Obstacles (LEFT → RIGHT) */
+    .obstacle {
+        width: 45px;
+        height: 45px;
+        background: red;
+        position: absolute;
+        bottom: 45px;
+        left: -80px;
+        border-radius: 6px;
+        box-shadow: 0px 6px 10px rgba(0,0,0,0.3);
+    }
+
+    #score {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-size: 25px;
+    }
+
+    #gameOver {
+        display: none;
+        color: white;
+        font-size: 40px;
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        top: 120px;
+    }
+
+    #restartBtn {
+        display: none;
+        position: absolute;
+        top: 190px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 25px;
+        background: #ff3647;
+        color: white;
+        border: none;
+        font-size: 20px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="game" id="gameBox">
+    <div class="ground"></div>
+    <div id="player"></div>
+    <div id="score">Score: 0</div>
+    <div id="gameOver">GAME OVER</div>
+    <button id="restartBtn">RESTART</button>
+</div>
+
+<script>
+let player = document.getElementById("player");
+let gameBox = document.getElementById("gameBox");
+let scoreBox = document.getElementById("score");
+let gameOverText = document.getElementById("gameOver");
+let restartBtn = document.getElementById("restartBtn");
+
+let isJumping = false;
+let gameOver = false;
+let score = 0;
+let obstacleSpeed = 6; // initial speed
+
+/* --------- SMOOTH & SLOW JUMP --------- */
+function jump() {
+    if (isJumping || gameOver) return;
+    isJumping = true;
+
+    let height = 0;
+
+    let up = setInterval(() => {
+        if (height >= 130) { // peak height
+            clearInterval(up);
+
+            let down = setInterval(() => {
+                if (height <= 0) {
+                    clearInterval(down);
+                    isJumping = false;
+                } else {
+                    height -= 6; // slow descent
+                    player.style.bottom = 45 + height + "px";
+                }
+            }, 18);
+
+        } else {
+            height += 6; // slow ascent
+            player.style.bottom = 45 + height + "px";
+        }
+    }, 18);
+}
+
+/* --------- GENERATE LEFT → RIGHT OBSTACLES --------- */
+function spawnObstacle() {
+    if (gameOver) return;
+
+    let obs = document.createElement("div");
+    obs.classList.add("obstacle");
+    gameBox.appendChild(obs);
+
+    let pos = -80;
+
+    let move = setInterval(() => {
+        if (gameOver) {
+            clearInterval(move);
+            return;
+        }
+
+        pos += obstacleSpeed;
+        obs.style.left = pos + "px";
+
+        // Collision
+        let p = player.getBoundingClientRect();
+        let o = obs.getBoundingClientRect();
+
+        if (
+            o.right > p.left &&
+            o.left < p.right &&
+            o.bottom > p.top &&
+            o.top < p.bottom
+        ) {
+            endGame();
+            clearInterval(move);
+        }
+
+        if (pos > window.innerWidth + 100) {
+            obs.remove();
+            clearInterval(move);
+        }
+
+    }, 20);
+}
+
+/* --------- SCORE & SPEED INCREASE --------- */
+setInterval(() => {
+    if (!gameOver) {
+        score++;
+        scoreBox.textContent = "Score: " + score;
+
+        // Increase obstacle speed every 100 points
+        if (score % 100 === 0) {
+            obstacleSpeed += 0.5; // speed increases gradually
+        }
+    }
+}, 120);
+
+/* Spawn obstacle every 1.3 sec */
+setInterval(spawnObstacle, 1300);
+
+/* --------- END GAME --------- */
+function endGame() {
+    gameOver = true;
+    gameOverText.style.display = "block";
+    restartBtn.style.display = "block";
+}
+
+/* --------- CONTROLS --------- */
+document.addEventListener("keydown", e => {
+    if (e.code === "Space" || e.code === "ArrowUp") jump();
+});
+restartBtn.onclick = () => location.reload();
+</script>
+
+</body>
+</html>
